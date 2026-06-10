@@ -66,6 +66,7 @@ body {
 .dashboard-container {
   display: grid;
   grid-template-columns: 440px 1fr;
+  grid-template-rows: 1fr auto;
   gap: 36px;
   max-width: 1440px;
   margin: 0 auto;
@@ -73,23 +74,39 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar & Brand */
 .sidebar {
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 24px;
   position: sticky;
-  top: 40px;
+  top: 44px;
   align-self: start;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
   padding-right: 8px;
 }
 
+.main-content {
+  grid-row: 1;
+}
+
+.site-footer {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* Sidebar & Brand */
 .brand {
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-top: 8px;
 }
 
 .logo-container {
@@ -117,7 +134,7 @@ body {
 
 @keyframes logo-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-2px); }
 }
 
 @keyframes wave-slide {

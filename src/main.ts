@@ -248,6 +248,10 @@ app.innerHTML = `
         </section>
       </div>
     </main>
+
+    <footer class="site-footer">
+      <span>&copy; ${new Date().getFullYear()} Chris Hayden</span>
+    </footer>
   </div>
 `;
 
