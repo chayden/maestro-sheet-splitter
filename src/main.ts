@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { reorderTimerCardPdf } from './pdfReorder';
+import previewScreenshotUrl from './preview-example.png';
 import './styles.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -17,7 +18,7 @@ interface ProcessResult {
 
 type GuideKind = 'split' | 'topTrim' | 'bottomTrim';
 const SAFE_MARGIN_POINTS = 28.35;
-const HEADER_PREVIEW_FONT_SIZE = 10;
+const HEADER_PREVIEW_FONT_SIZE = 7.5;
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -26,106 +27,228 @@ if (!app) {
 }
 
 app.innerHTML = `
-  <section class="workspace" aria-labelledby="title">
-    <div class="intro">
-      <p class="eyebrow">Browser-only PDF tool</p>
-      <h1 id="title">Timer Card PDF Reorderer</h1>
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-container">
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+            <path class="wave-line-svg" d="M6 16c1-0.5 2-0.5 3 0s2 0.5 3 0 2-0.5 3 0 2 0.5 3 0" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <p class="eyebrow">Meet Maestro</p>
+          <h1 id="title" class="brand-title">Timesheet Splitter</h1>
+        </div>
+      </div>
+
       <p class="summary">
-        Drop in a PDF where each page contains two timer cards sorted by lane, then event. The new
-        PDF is arranged so one cut makes lane-ordered stacks with dividers between lanes.
+        Sort and reorder swim meet timer cards. Splits two-card PDF sheets and outputs lane-grouped stacks with dividers for easy printing.
       </p>
-    </div>
 
-    <form class="panel" id="controls">
-      <label class="drop-zone" id="dropZone" for="pdfInput">
-        <input id="pdfInput" type="file" accept="application/pdf,.pdf" />
-        <span class="drop-title">Drop PDF here</span>
-        <span class="drop-detail">or click to choose a file</span>
-      </label>
+      <form class="panel" id="controls">
+        <label class="drop-zone" id="dropZone" for="pdfInput">
+          <input id="pdfInput" type="file" accept="application/pdf,.pdf" />
+          <div class="drop-zone-content">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span class="drop-title">Drop Meet PDF</span>
+            <span class="drop-detail">or click to browse files</span>
+          </div>
+        </label>
 
-      <div class="options">
-        <label class="field-row" for="laneCount">
-          <span>Number of lanes</span>
-          <input id="laneCount" type="number" min="1" max="24" step="1" value="6" inputmode="numeric" />
-        </label>
-        <label class="field-row wide-field" for="meetHeader">
-          <span>Meet header</span>
-          <input id="meetHeader" type="text" maxlength="120" placeholder="no header" />
-        </label>
-        <label class="field-row" for="meetHeaderOffsetPoints">
-          <span>Header position</span>
-          <input id="meetHeaderOffsetPoints" type="number" min="12" max="180" step="1" value="44" inputmode="numeric" />
-        </label>
-        <label class="field-row" for="contentTopOffsetPoints">
-          <span>Content top offset</span>
-          <input id="contentTopOffsetPoints" type="number" min="29" max="216" step="1" value="30" inputmode="numeric" />
-        </label>
-        <label class="check-field" for="addLaneNumbers">
-          <input id="addLaneNumbers" type="checkbox" checked />
-          <span>Add lane number to every timer card</span>
-        </label>
-        <label class="field-row" for="laneNumberOffsetPoints">
-          <span>Lane number position</span>
-          <input id="laneNumberOffsetPoints" type="number" min="29" max="180" step="1" value="30" inputmode="numeric" />
-        </label>
-        <label class="field-row" for="splitOffsetPoints">
-          <span>Input split offset</span>
-          <input id="splitOffsetPoints" type="number" min="-144" max="144" step="1" value="21" inputmode="numeric" />
-        </label>
-        <label class="field-row" for="topTrimPoints">
-          <span>Top trim</span>
-          <input id="topTrimPoints" type="number" min="0" max="216" step="1" value="51" inputmode="numeric" />
-        </label>
-        <label class="field-row" for="bottomTrimPoints">
-          <span>Bottom trim</span>
-          <input id="bottomTrimPoints" type="number" min="0" max="216" step="1" value="76" inputmode="numeric" />
-        </label>
-        <p class="field-help">Points from center of the source PDF. Positive moves the source split up; negative moves it down.</p>
-      </div>
+        <div class="options">
+          <!-- Options Group 1: Meet Setup -->
+          <div class="options-group">
+            <h2 class="group-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+              Meet Setup
+            </h2>
+            
+            <label class="field-row" for="laneCount">
+              <span class="field-label">Number of Lanes</span>
+              <input id="laneCount" type="number" min="1" max="24" step="1" value="6" inputmode="numeric" />
+            </label>
+            
+            <label class="field-row wide-field" for="meetHeader">
+              <span class="field-label">Meet Header Text</span>
+              <input id="meetHeader" type="text" maxlength="120" placeholder="e.g. City Championship 2026" />
+            </label>
+            
+            <label class="field-row" for="meetHeaderOffsetPoints">
+              <span class="field-label">Header Offset (pt)</span>
+              <input id="meetHeaderOffsetPoints" type="number" min="12" max="180" step="1" value="44" inputmode="numeric" />
+            </label>
+          </div>
 
-      <button class="primary" id="convertButton" type="submit" disabled>Build reordered PDF</button>
-    </form>
+          <!-- Options Group 2: Output Options -->
+          <div class="options-group">
+            <h2 class="group-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M15 3v18M3 9h18M3 15h18" /></svg>
+              Card Layout
+            </h2>
+            
+            <label class="field-row" for="contentTopOffsetPoints">
+              <span class="field-label">Content Top Offset (pt)</span>
+              <input id="contentTopOffsetPoints" type="number" min="29" max="216" step="1" value="30" inputmode="numeric" />
+            </label>
+            
+            <label class="check-field" for="addLaneNumbers">
+              <input id="addLaneNumbers" type="checkbox" checked />
+              <span class="field-label">Stamp lane numbers on cards</span>
+            </label>
+            
+            <label class="field-row" for="laneNumberOffsetPoints">
+              <span class="field-label">Lane Num Position (pt)</span>
+              <input id="laneNumberOffsetPoints" type="number" min="29" max="180" step="1" value="30" inputmode="numeric" />
+            </label>
+          </div>
 
-    <section class="preview" id="previewPanel" aria-label="PDF split preview" hidden>
-      <div class="preview-header">
-        <div>
-          <strong>Preview</strong>
-          <p>Adjust the source crop on the left and preview the generated output page on the right.</p>
-        </div>
-        <button class="secondary" id="resetSplitButton" type="button">Center</button>
-      </div>
-      <div class="preview-grid">
-        <div class="preview-column">
-          <div class="preview-title">Source page</div>
-          <div class="preview-stage" id="previewStage">
-            <canvas id="previewCanvas"></canvas>
-            <button class="guide-line trim-line top-trim-line" id="topTrimLine" type="button" aria-label="Drag top trim line">
-              <span id="topTrimLabel">Top 0 pt</span>
-            </button>
-            <button class="guide-line split-line" id="splitLine" type="button" aria-label="Drag source split line">
-              <span id="splitLabel">0 pt</span>
-            </button>
-            <button class="guide-line trim-line bottom-trim-line" id="bottomTrimLine" type="button" aria-label="Drag bottom trim line">
-              <span id="bottomTrimLabel">Bottom 0 pt</span>
-            </button>
+          <!-- Options Group 3: Split Calibration -->
+          <div class="options-group">
+            <h2 class="group-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" /></svg>
+              Split Calibration
+            </h2>
+            
+            <label class="field-row" for="splitOffsetPoints">
+              <span class="field-label">Input Split Offset (pt)</span>
+              <input id="splitOffsetPoints" type="number" min="-144" max="144" step="1" value="21" inputmode="numeric" />
+            </label>
+            
+            <label class="field-row" for="topTrimPoints">
+              <span class="field-label">Top Trim (pt)</span>
+              <input id="topTrimPoints" type="number" min="0" max="216" step="1" value="51" inputmode="numeric" />
+            </label>
+            
+            <label class="field-row" for="bottomTrimPoints">
+              <span class="field-label">Bottom Trim (pt)</span>
+              <input id="bottomTrimPoints" type="number" min="0" max="216" step="1" value="76" inputmode="numeric" />
+            </label>
+            <p class="field-help">Adjust the split line boundary and top/bottom trims to clean up card edges.</p>
           </div>
         </div>
-        <div class="preview-column">
-          <div class="preview-title">Generated page preview</div>
-          <div class="output-page-stage" id="outputPageStage">
-            <canvas id="outputPreviewCanvas"></canvas>
-            <button class="output-header-handle" id="outputHeaderHandle" type="button" aria-label="Drag meet header position">
-              <span id="outputHeaderText">Meet header</span>
-            </button>
+      </form>
+    </aside>
+
+    <main class="main-content">
+      <section class="onboarding-card" id="onboardingPanel">
+        <div class="onboarding-header">
+          <div class="badge">How it works</div>
+          <h2>Simplifying Meet Maestro Timer Sheet Printing</h2>
+        </div>
+        
+        <div class="onboarding-body">
+          <p>
+            When SwimTopia's <strong>Meet Maestro</strong> prints timer sheets two-to-a-page, they print in event order. 
+            If you wish to cut the pages in half so each event can be sent to the data table as soon as it completes, 
+            the stack order gets completely scrambled. You'd normally have to manually sort them back into event order 
+            and divide them up by lanes.
+          </p>
+          
+          <div class="onboarding-divider"></div>
+          
+          <p class="onboarding-subtitle">Lanesplitter solves this by automating the workflow:</p>
+          
+          <ul class="features-list">
+            <li>
+              <div class="feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" /></svg>
+              </div>
+              <div>
+                <strong>Smart Reordering</strong>
+                <span>Rearranges sheets so the two cut piles stack perfectly into pre-sorted lanes and events with zero manual shuffling.</span>
+              </div>
+            </li>
+            <li>
+              <div class="feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="21" /><line x1="18" y1="3" x2="18" y2="21" /><line x1="12" y1="3" x2="12" y2="21" /></svg>
+              </div>
+              <div>
+                <strong>Lane Division Cards</strong>
+                <span>Inserts bold division sheets at the start of each lane group for easy distribution.</span>
+              </div>
+            </li>
+            <li>
+              <div class="feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="12" x2="20" y2="12" /><line x1="14" y1="3" x2="14" y2="11" /><line x1="14" y1="13" x2="14" y2="21" /></svg>
+              </div>
+              <div>
+                <strong>Precision Cutting & Trimming</strong>
+                <span>Provides a center dotted cut-line and trims off Meet Maestro's margins, optionally stamping clean custom meet headers and lane tags.</span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="onboarding-divider"></div>
+          
+          <div class="onboarding-screenshot-container">
+            <img class="onboarding-screenshot" src="${previewScreenshotUrl}" alt="Workspace Preview Example" />
           </div>
         </div>
-      </div>
-    </section>
+        
+        <div class="onboarding-footer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+          <span>Select or drop your timer sheet PDF to configure guidelines and export.</span>
+        </div>
+      </section>
 
-    <section class="status" id="status" aria-live="polite">
-      <p>Choose a PDF to begin.</p>
-    </section>
-  </section>
+      <section class="preview" id="previewPanel" aria-label="PDF split preview" hidden>
+        <div class="preview-header">
+          <div class="preview-header-text">
+            <h2>Live Workspace</h2>
+            <p>Drag the purple and blue guidelines on the source page to adjust cropping and split points.</p>
+          </div>
+          <button class="secondary" id="resetSplitButton" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+            <span>Center</span>
+          </button>
+        </div>
+        
+        <div class="preview-grid">
+          <div class="preview-column">
+            <div class="preview-title">Source page</div>
+            <div class="preview-stage" id="previewStage">
+              <canvas id="previewCanvas"></canvas>
+              <div class="trim-overlay top-trim-overlay" id="topTrimOverlay"></div>
+              <div class="trim-overlay bottom-trim-overlay" id="bottomTrimOverlay"></div>
+              <button class="guide-line trim-line top-trim-line" id="topTrimLine" type="button" aria-label="Drag top trim line">
+                <span id="topTrimLabel">Top 0 pt</span>
+              </button>
+              <button class="guide-line split-line" id="splitLine" type="button" aria-label="Drag source split line">
+                <span id="splitLabel">0 pt</span>
+              </button>
+              <button class="guide-line trim-line bottom-trim-line" id="bottomTrimLine" type="button" aria-label="Drag bottom trim line">
+                <span id="bottomTrimLabel">Bottom 0 pt</span>
+              </button>
+            </div>
+          </div>
+          <div class="preview-column">
+            <div class="preview-title">Generated page preview</div>
+            <div class="output-page-stage" id="outputPageStage">
+              <canvas id="outputPreviewCanvas"></canvas>
+              <button class="output-header-handle" id="outputHeaderHandle" type="button" aria-label="Drag meet header position">
+                <span id="outputHeaderText">Meet header</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="actions-panel" id="actionsPanel" hidden>
+        <button class="primary" id="convertButton" type="submit" form="controls" disabled>
+          Build reordered PDF
+        </button>
+        <section class="status" id="status" aria-live="polite">
+          <p>Choose a PDF to begin.</p>
+        </section>
+      </div>
+    </main>
+  </div>
 `;
 
 const form = document.querySelector<HTMLFormElement>('#controls');
@@ -143,8 +266,12 @@ const splitOffsetInput = document.querySelector<HTMLInputElement>('#splitOffsetP
 const topTrimInput = document.querySelector<HTMLInputElement>('#topTrimPoints');
 const bottomTrimInput = document.querySelector<HTMLInputElement>('#bottomTrimPoints');
 const previewPanel = document.querySelector<HTMLElement>('#previewPanel');
+const onboardingPanel = document.querySelector<HTMLElement>('#onboardingPanel');
+const actionsPanel = document.querySelector<HTMLElement>('#actionsPanel');
 const previewStage = document.querySelector<HTMLElement>('#previewStage');
 const previewCanvas = document.querySelector<HTMLCanvasElement>('#previewCanvas');
+const topTrimOverlay = document.querySelector<HTMLElement>('#topTrimOverlay');
+const bottomTrimOverlay = document.querySelector<HTMLElement>('#bottomTrimOverlay');
 const splitLine = document.querySelector<HTMLButtonElement>('#splitLine');
 const topTrimLine = document.querySelector<HTMLButtonElement>('#topTrimLine');
 const bottomTrimLine = document.querySelector<HTMLButtonElement>('#bottomTrimLine');
@@ -177,8 +304,12 @@ if (
   !topTrimInput ||
   !bottomTrimInput ||
   !previewPanel ||
+  !onboardingPanel ||
+  !actionsPanel ||
   !previewStage ||
   !previewCanvas ||
+  !topTrimOverlay ||
+  !bottomTrimOverlay ||
   !splitLine ||
   !topTrimLine ||
   !bottomTrimLine ||
@@ -207,6 +338,8 @@ const splitInput = splitOffsetInput;
 const topTrim = topTrimInput;
 const bottomTrim = bottomTrimInput;
 const preview = previewPanel;
+const onboarding = onboardingPanel;
+const actions = actionsPanel;
 const stage = previewStage;
 const canvas = previewCanvas;
 const splitHandle = splitLine;
@@ -536,6 +669,8 @@ async function renderPreview(file: File): Promise<void> {
   const page = await pdf.getPage(1);
   const unscaledViewport = page.getViewport({ scale: 1 });
   preview.hidden = false;
+  onboarding.hidden = true;
+  actions.hidden = false;
   const maxPreviewWidth = Math.min(stage.parentElement?.clientWidth || 560, 520);
   const cssScale = maxPreviewWidth / unscaledViewport.width;
   const deviceScale = window.devicePixelRatio || 1;
@@ -572,6 +707,8 @@ async function renderPreview(file: File): Promise<void> {
 
 function hidePreview(): void {
   preview.hidden = true;
+  onboarding.hidden = false;
+  actions.hidden = true;
   previewState = null;
 }
 
@@ -665,6 +802,16 @@ function positionGuides(): void {
   splitValueLabel.textContent = `${offset} pt`;
   topTrimValueLabel.textContent = `Top ${topTrimPoints} pt`;
   bottomTrimValueLabel.textContent = `Bottom ${bottomTrimPoints} pt`;
+
+  if (topTrimOverlay) {
+    topTrimOverlay.style.height = `${topTrimY}px`;
+  }
+  if (bottomTrimOverlay) {
+    bottomTrimOverlay.style.top = `${bottomTrimY}px`;
+    const totalHeight = previewState.pageHeightPoints * previewState.cssScale;
+    bottomTrimOverlay.style.height = `${totalHeight - bottomTrimY}px`;
+  }
+
   renderOutputPreview();
 }
 
