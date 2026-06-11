@@ -39,7 +39,7 @@ app.innerHTML = `
         </div>
         <div class="brand-text">
           <p class="eyebrow">Meet Maestro</p>
-          <h1 id="title" class="brand-title">Timesheet Splitter</h1>
+          <h1 id="title" class="brand-title">Time Sheet Splitter</h1>
         </div>
       </div>
 
@@ -78,11 +78,6 @@ app.innerHTML = `
               <span class="field-label">Meet Header Text</span>
               <input id="meetHeader" type="text" maxlength="120" placeholder="e.g. City Championship 2026" />
             </label>
-            
-            <label class="field-row" for="meetHeaderOffsetPoints">
-              <span class="field-label">Header Offset (pt)</span>
-              <input id="meetHeaderOffsetPoints" type="number" min="12" max="180" step="1" value="44" inputmode="numeric" />
-            </label>
           </div>
 
           <!-- Options Group 2: Output Options -->
@@ -91,46 +86,59 @@ app.innerHTML = `
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M15 3v18M3 9h18M3 15h18" /></svg>
               Card Layout
             </h2>
-            
-            <label class="field-row" for="contentTopOffsetPoints">
-              <span class="field-label">Content Top Offset (pt)</span>
-              <input id="contentTopOffsetPoints" type="number" min="29" max="216" step="1" value="30" inputmode="numeric" />
-            </label>
-            
+
             <label class="check-field" for="addLaneNumbers">
               <input id="addLaneNumbers" type="checkbox" checked />
               <span class="field-label">Stamp lane numbers on cards</span>
             </label>
-            
-            <label class="field-row" for="laneNumberOffsetPoints">
-              <span class="field-label">Lane Num Position (pt)</span>
-              <input id="laneNumberOffsetPoints" type="number" min="29" max="180" step="1" value="30" inputmode="numeric" />
+
+            <label class="check-field" for="addLaneDividers">
+              <input id="addLaneDividers" type="checkbox" checked />
+              <span class="field-label">Add lane divider cards</span>
             </label>
           </div>
 
-          <!-- Options Group 3: Split Calibration -->
-          <div class="options-group">
-            <h2 class="group-title">
+          <!-- Advanced Settings (collapsed) -->
+          <details class="options-group advanced-group">
+            <summary class="group-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" /></svg>
-              Split Calibration
-            </h2>
-            
-            <label class="field-row" for="splitOffsetPoints">
-              <span class="field-label">Input Split Offset (pt)</span>
-              <input id="splitOffsetPoints" type="number" min="-144" max="144" step="1" value="21" inputmode="numeric" />
-            </label>
-            
-            <label class="field-row" for="topTrimPoints">
-              <span class="field-label">Top Trim (pt)</span>
-              <input id="topTrimPoints" type="number" min="0" max="216" step="1" value="51" inputmode="numeric" />
-            </label>
-            
-            <label class="field-row" for="bottomTrimPoints">
-              <span class="field-label">Bottom Trim (pt)</span>
-              <input id="bottomTrimPoints" type="number" min="0" max="216" step="1" value="76" inputmode="numeric" />
-            </label>
-            <p class="field-help">Adjust the split line boundary and top/bottom trims to clean up card edges.</p>
-          </div>
+              Advanced
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            </summary>
+
+            <div class="advanced-fields">
+              <label class="field-row" for="meetHeaderOffsetPoints">
+                <span class="field-label">Header Offset (pt)</span>
+                <input id="meetHeaderOffsetPoints" type="number" min="12" max="180" step="1" value="44" inputmode="numeric" />
+              </label>
+
+              <label class="field-row" for="contentTopOffsetPoints">
+                <span class="field-label">Content Top Offset (pt)</span>
+                <input id="contentTopOffsetPoints" type="number" min="29" max="216" step="1" value="30" inputmode="numeric" />
+              </label>
+
+              <label class="field-row" for="laneNumberOffsetPoints">
+                <span class="field-label">Lane Num Position (pt)</span>
+                <input id="laneNumberOffsetPoints" type="number" min="29" max="180" step="1" value="30" inputmode="numeric" />
+              </label>
+
+              <label class="field-row" for="splitOffsetPoints">
+                <span class="field-label">Input Split Offset (pt)</span>
+                <input id="splitOffsetPoints" type="number" min="-144" max="144" step="1" value="21" inputmode="numeric" />
+              </label>
+
+              <label class="field-row" for="topTrimPoints">
+                <span class="field-label">Top Trim (pt)</span>
+                <input id="topTrimPoints" type="number" min="0" max="216" step="1" value="51" inputmode="numeric" />
+              </label>
+
+              <label class="field-row" for="bottomTrimPoints">
+                <span class="field-label">Bottom Trim (pt)</span>
+                <input id="bottomTrimPoints" type="number" min="0" max="216" step="1" value="76" inputmode="numeric" />
+              </label>
+              <p class="field-help">Adjust the split line boundary and top/bottom trims to clean up card edges.</p>
+            </div>
+          </details>
         </div>
       </form>
     </aside>
@@ -146,13 +154,24 @@ app.innerHTML = `
           <p>
             When SwimTopia's <strong>Meet Maestro</strong> prints timer sheets two-to-a-page, they print in event order. 
             If you wish to cut the pages in half so each event can be sent to the data table as soon as it completes, 
-            the stack order gets completely scrambled. You'd normally have to manually sort them back into event order 
-            and divide them up by lanes.
+            each lane's cards need to be unshuffled back into event order
+            and divided up by lanes.
           </p>
           
           <div class="onboarding-divider"></div>
-          
-          <p class="onboarding-subtitle">Lanesplitter solves this by automating the workflow:</p>
+
+          <p class="onboarding-subtitle">Exporting from Meet Maestro</p>
+          <ol class="steps-list">
+            <li><span>Open <strong>Settings</strong></span></li>
+            <li><span>Select <strong>Timer Sheets</strong></span></li>
+            <li><span>Leave all settings at default&nbsp;&mdash; 2 events per page, sort by <strong>Lane then Event</strong>, all events and all lanes</span></li>
+            <li><span><strong>Print to PDF</strong> file</span></li>
+            <li><span>Drag the PDF file into <strong>Time Sheet Splitter</strong></span></li>
+          </ol>
+
+          <div class="onboarding-divider"></div>
+
+          <p class="onboarding-subtitle">Time Sheet Splitter handles the rest:</p>
           
           <ul class="features-list">
             <li>
@@ -179,7 +198,7 @@ app.innerHTML = `
               </div>
               <div>
                 <strong>Precision Cutting & Trimming</strong>
-                <span>Provides a center dotted cut-line and trims off Meet Maestro's margins, optionally stamping clean custom meet headers and lane tags.</span>
+                <span>Provides a center dotted cut-line and trims off Meet Maestro's margins, optionally adding clean custom meet headers and lane tags.</span>
               </div>
             </li>
           </ul>
@@ -191,10 +210,6 @@ app.innerHTML = `
           </div>
         </div>
         
-        <div class="onboarding-footer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-          <span>Select or drop your timer sheet PDF to configure guidelines and export.</span>
-        </div>
       </section>
 
       <section class="preview" id="previewPanel" aria-label="PDF split preview" hidden>
@@ -266,6 +281,7 @@ const meetHeaderOffsetInput = document.querySelector<HTMLInputElement>('#meetHea
 const contentTopOffsetInput = document.querySelector<HTMLInputElement>('#contentTopOffsetPoints');
 const addLaneNumbersInput = document.querySelector<HTMLInputElement>('#addLaneNumbers');
 const laneNumberOffsetInput = document.querySelector<HTMLInputElement>('#laneNumberOffsetPoints');
+const addLaneDividersInput = document.querySelector<HTMLInputElement>('#addLaneDividers');
 const splitOffsetInput = document.querySelector<HTMLInputElement>('#splitOffsetPoints');
 const topTrimInput = document.querySelector<HTMLInputElement>('#topTrimPoints');
 const bottomTrimInput = document.querySelector<HTMLInputElement>('#bottomTrimPoints');
@@ -304,6 +320,7 @@ if (
   !contentTopOffsetInput ||
   !addLaneNumbersInput ||
   !laneNumberOffsetInput ||
+  !addLaneDividersInput ||
   !splitOffsetInput ||
   !topTrimInput ||
   !bottomTrimInput ||
@@ -338,6 +355,7 @@ const meetHeaderOffset = meetHeaderOffsetInput;
 const contentTopOffset = contentTopOffsetInput;
 const addLaneNumbers = addLaneNumbersInput;
 const laneNumberOffset = laneNumberOffsetInput;
+const addLaneDividers = addLaneDividersInput;
 const splitInput = splitOffsetInput;
 const topTrim = topTrimInput;
 const bottomTrim = bottomTrimInput;
@@ -466,6 +484,7 @@ form.addEventListener('submit', async (event) => {
       meetHeaderOffsetPoints,
       addLaneNumbers: addLaneNumbers.checked,
       laneNumberOffsetPoints,
+      addLaneDividers: addLaneDividers.checked,
     });
 
     showResult(result);
@@ -516,6 +535,7 @@ function setBusy(isBusy: boolean): void {
   contentTopOffset.disabled = isBusy;
   addLaneNumbers.disabled = isBusy;
   laneNumberOffset.disabled = isBusy;
+  addLaneDividers.disabled = isBusy;
   splitInput.disabled = isBusy;
   topTrim.disabled = isBusy;
   bottomTrim.disabled = isBusy;
@@ -564,6 +584,7 @@ async function reorderTimerCards(
     meetHeaderOffsetPoints: number;
     addLaneNumbers: boolean;
     laneNumberOffsetPoints: number;
+    addLaneDividers: boolean;
   },
 ): Promise<ProcessResult> {
   const bytes = await file.arrayBuffer();

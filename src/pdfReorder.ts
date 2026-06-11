@@ -31,6 +31,7 @@ export interface ReorderOptions {
   meetHeaderOffsetPoints: number;
   addLaneNumbers: boolean;
   laneNumberOffsetPoints: number;
+  addLaneDividers: boolean;
 }
 
 export interface ReorderResult {
@@ -91,7 +92,7 @@ export async function reorderTimerCardPdf(
     throw new Error('This PDF needs at least two card halves to reorder.');
   }
 
-  const desiredStack = buildDesiredStack(cards, options.laneCount);
+  const desiredStack = buildDesiredStack(cards, options.laneCount, options.addLaneDividers);
   const outputPageCount = Math.ceil(desiredStack.length / 2);
   const templatePage = sourcePages[0];
   const { width, height } = templatePage.getSize();
@@ -114,7 +115,7 @@ export async function reorderTimerCardPdf(
     bytes: await outputPdf.save(),
     sourcePageCount: sourcePages.length,
     cardCount: cards.length,
-    dividerCount: options.laneCount,
+    dividerCount: options.addLaneDividers ? options.laneCount : 0,
     outputPageCount,
     ignoredTrailingBlank,
   };
@@ -148,12 +149,14 @@ function trimTrailingBlankIfNeeded(
   );
 }
 
-function buildDesiredStack(cards: SourceCard[], laneCount: number): CardRef[] {
+function buildDesiredStack(cards: SourceCard[], laneCount: number, addDividers: boolean): CardRef[] {
   const cardsPerLane = cards.length / laneCount;
   const desiredStack: CardRef[] = [];
 
   for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
-    desiredStack.push({ kind: 'divider', laneNumber: laneIndex + 1 });
+    if (addDividers) {
+      desiredStack.push({ kind: 'divider', laneNumber: laneIndex + 1 });
+    }
     const laneStart = laneIndex * cardsPerLane;
     desiredStack.push(
       ...cards.slice(laneStart, laneStart + cardsPerLane).map((card) => ({
