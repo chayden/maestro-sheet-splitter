@@ -32,6 +32,7 @@ export interface ReorderOptions {
   addLaneNumbers: boolean;
   laneNumberOffsetPoints: number;
   addLaneDividers: boolean;
+  excludeCardIndices?: Set<number>;
 }
 
 export interface ReorderResult {
@@ -85,7 +86,7 @@ export async function reorderTimerCardPdf(
   const outputPdf = await PDFDocument.create();
   const dividerFont = await outputPdf.embedFont(StandardFonts.HelveticaBold);
   const headerFont = await outputPdf.embedFont(StandardFonts.HelveticaBold);
-  const allCards = buildCardList(sourcePages.length);
+  const allCards = buildCardList(sourcePages.length, options.excludeCardIndices);
   const { cards, ignoredTrailingBlank } = trimTrailingBlankIfNeeded(allCards, options.laneCount);
 
   if (cards.length < 2) {
@@ -121,12 +122,17 @@ export async function reorderTimerCardPdf(
   };
 }
 
-function buildCardList(pageCount: number): SourceCard[] {
+function buildCardList(pageCount: number, excludeCardIndices?: Set<number>): SourceCard[] {
   const cards: SourceCard[] = [];
+  let cardIndex = 0;
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
-    cards.push({ kind: 'source', sourcePageIndex: pageIndex, half: 'top' });
-    cards.push({ kind: 'source', sourcePageIndex: pageIndex, half: 'bottom' });
+    for (const half of ['top', 'bottom'] as const) {
+      if (!excludeCardIndices?.has(cardIndex)) {
+        cards.push({ kind: 'source', sourcePageIndex: pageIndex, half });
+      }
+      cardIndex += 1;
+    }
   }
 
   return cards;

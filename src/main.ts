@@ -572,6 +572,49 @@ function showResult(result: ProcessResult): void {
   `;
 }
 
+async function findNoSwimmersCards(
+  pdf: pdfjsLib.PDFDocumentProxy,
+  options: { splitOffsetPoints: number },
+): Promise<Set<number>> {
+  const excludeIndices = new Set<number>();
+  const pageCount = pdf.numPages;
+  let cardIndex = 0;
+
+  for (let pageIndex = 1; pageIndex <= pageCount; pageIndex++) {
+    const page = await pdf.getPage(pageIndex);
+    const viewport = page.getViewport({ scale: 1 });
+    const splitY = viewport.height / 2 + options.splitOffsetPoints;
+
+    const textContent = await page.getTextContent();
+    const textItems = textContent.items;
+
+    for (const half of ['top', 'bottom'] as const) {
+      let halfText = '';
+
+      for (const item of textItems) {
+        if (!('str' in item) || !('transform' in item)) continue;
+        const transform = item.transform as number[];
+        const y = transform[5];
+        const text = item.str;
+
+        // Check if text is in the appropriate half
+        if (half === 'top' && y >= splitY) {
+          halfText += text + ' ';
+        } else if (half === 'bottom' && y < splitY) {
+          halfText += text + ' ';
+        }
+      }
+
+      if (halfText.includes('No swimmers')) {
+        excludeIndices.add(cardIndex);
+      }
+      cardIndex += 1;
+    }
+  }
+
+  return excludeIndices;
+}
+
 async function reorderTimerCards(
   file: File,
   options: {
@@ -588,7 +631,12 @@ async function reorderTimerCards(
   },
 ): Promise<ProcessResult> {
   const bytes = await file.arrayBuffer();
-  const result = await reorderTimerCardPdf(bytes, options);
+
+  // Load PDF with pdfjs-dist to extract text and find "No swimmers" cards
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const excludeCardIndices = await findNoSwimmersCards(pdf, options);
+
+  const result = await reorderTimerCardPdf(bytes, { ...options, excludeCardIndices });
   const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
   new Uint8Array(outputBuffer).set(result.bytes);
 
