@@ -631,12 +631,21 @@ async function reorderTimerCards(
   },
 ): Promise<ProcessResult> {
   const bytes = await file.arrayBuffer();
+  const pdfjsBytes = copyPdfBytes(bytes);
+  const reorderBytes = copyPdfBytes(bytes);
 
   // Load PDF with pdfjs-dist to extract text and find "No swimmers" cards
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
-  const excludeCardIndices = await findNoSwimmersCards(pdf, options);
+  const loadingTask = pdfjsLib.getDocument({ data: pdfjsBytes });
+  const pdf = await loadingTask.promise;
+  let excludeCardIndices: Set<number>;
 
-  const result = await reorderTimerCardPdf(bytes, { ...options, excludeCardIndices });
+  try {
+    excludeCardIndices = await findNoSwimmersCards(pdf, options);
+  } finally {
+    await loadingTask.destroy();
+  }
+
+  const result = await reorderTimerCardPdf(reorderBytes, { ...options, excludeCardIndices });
   const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
   new Uint8Array(outputBuffer).set(result.bytes);
 
@@ -738,44 +747,54 @@ function clampMeetHeaderOffset(offset: number): number {
 
 async function renderPreview(file: File): Promise<void> {
   const bytes = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
-  const page = await pdf.getPage(1);
-  const unscaledViewport = page.getViewport({ scale: 1 });
-  preview.hidden = false;
-  onboarding.hidden = true;
-  actions.hidden = false;
-  const maxPreviewWidth = Math.min(stage.parentElement?.clientWidth || 560, 520);
-  const cssScale = maxPreviewWidth / unscaledViewport.width;
-  const deviceScale = window.devicePixelRatio || 1;
-  const renderViewport = page.getViewport({ scale: cssScale * deviceScale });
-  const cssWidth = renderViewport.width / deviceScale;
-  const cssHeight = renderViewport.height / deviceScale;
-  const context = canvas.getContext('2d');
+  const loadingTask = pdfjsLib.getDocument({ data: copyPdfBytes(bytes) });
+  const pdf = await loadingTask.promise;
 
-  if (!context) {
-    throw new Error('Canvas preview is not available in this browser.');
+  try {
+    const page = await pdf.getPage(1);
+    const unscaledViewport = page.getViewport({ scale: 1 });
+    preview.hidden = false;
+    onboarding.hidden = true;
+    actions.hidden = false;
+    const maxPreviewWidth = Math.min(stage.parentElement?.clientWidth || 560, 520);
+    const cssScale = maxPreviewWidth / unscaledViewport.width;
+    const deviceScale = window.devicePixelRatio || 1;
+    const renderViewport = page.getViewport({ scale: cssScale * deviceScale });
+    const cssWidth = renderViewport.width / deviceScale;
+    const cssHeight = renderViewport.height / deviceScale;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Canvas preview is not available in this browser.');
+    }
+
+    canvas.width = renderViewport.width;
+    canvas.height = renderViewport.height;
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    stage.style.width = `${cssWidth}px`;
+    stage.style.height = `${cssHeight}px`;
+
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport: renderViewport,
+    }).promise;
+
+    previewState = {
+      pageWidthPoints: unscaledViewport.width,
+      pageHeightPoints: unscaledViewport.height,
+      cssScale,
+    };
+    updatePreviewGuidesFromInputs();
+    updateOutputHeaderPreview();
+  } finally {
+    await loadingTask.destroy();
   }
+}
 
-  canvas.width = renderViewport.width;
-  canvas.height = renderViewport.height;
-  canvas.style.width = `${cssWidth}px`;
-  canvas.style.height = `${cssHeight}px`;
-  stage.style.width = `${cssWidth}px`;
-  stage.style.height = `${cssHeight}px`;
-
-  await page.render({
-    canvas,
-    canvasContext: context,
-    viewport: renderViewport,
-  }).promise;
-
-  previewState = {
-    pageWidthPoints: unscaledViewport.width,
-    pageHeightPoints: unscaledViewport.height,
-    cssScale,
-  };
-  updatePreviewGuidesFromInputs();
-  updateOutputHeaderPreview();
+function copyPdfBytes(bytes: ArrayBuffer): Uint8Array {
+  return new Uint8Array(bytes).slice();
 }
 
 function hidePreview(): void {
